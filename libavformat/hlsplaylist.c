@@ -90,6 +90,8 @@ void ff_hls_write_stream_info(AVStream *st, AVIOContext *out, int bandwidth,
         avio_printf(out, ",AUDIO=\"group_%s\"", agroup);
     if (ccgroup && ccgroup[0])
         avio_printf(out, ",CLOSED-CAPTIONS=\"%s\"", ccgroup);
+    else
+        avio_printf(out, ",CLOSED-CAPTIONS=\"NONE\"");
     if (sgroup && sgroup[0])
         avio_printf(out, ",SUBTITLES=\"%s\"", sgroup);
     avio_printf(out, "\n%s\n\n", filename);
