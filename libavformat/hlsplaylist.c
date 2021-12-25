@@ -44,7 +44,7 @@ void ff_hls_write_audio_rendition(AVIOContext *out, const char *agroup,
         return;
 
     avio_printf(out, "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"group_%s\"", agroup);
-    avio_printf(out, ",NAME=\"audio_%d\",DEFAULT=%s,", name_id, is_default ? "YES" : "NO");
+    avio_printf(out, ",NAME=\"audio_%d\",DEFAULT=%s,AUTOSELECT=YES,", name_id, is_default ? "YES" : "NO");
     if (language) {
         avio_printf(out, "LANGUAGE=\"%s\",", language);
     }
@@ -91,7 +91,7 @@ void ff_hls_write_stream_info(AVStream *st, AVIOContext *out, int bandwidth,
     if (ccgroup && ccgroup[0])
         avio_printf(out, ",CLOSED-CAPTIONS=\"%s\"", ccgroup);
     else
-        avio_printf(out, ",CLOSED-CAPTIONS=\"NONE\"");
+        avio_printf(out, ",CLOSED-CAPTIONS=NONE");
     if (sgroup && sgroup[0])
         avio_printf(out, ",SUBTITLES=\"%s\"", sgroup);
     avio_printf(out, "\n%s\n\n", filename);
