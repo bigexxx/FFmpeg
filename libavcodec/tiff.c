@@ -721,20 +721,6 @@ static int dng_decode_jpeg(AVCodecContext *avctx, AVFrame *frame,
     return 0;
 }
 
-static int dng_decode_strip(AVCodecContext *avctx, AVFrame *frame)
-{
-    TiffContext *s = avctx->priv_data;
-    int ret = ff_set_dimensions(s->avctx_mjpeg, s->width, s->height);
-
-    if (ret < 0)
-        return ret;
-
-    s->jpgframe->width  = s->width;
-    s->jpgframe->height = s->height;
-
-    return dng_decode_jpeg(avctx, frame, s->stripsize, 0, 0, s->width, s->height);
-}
-
 static int tiff_unpack_strip(TiffContext *s, AVFrame *p, uint8_t *dst, int stride,
                              const uint8_t *src, int size, int strip_start, int lines)
 {
@@ -856,7 +842,7 @@ static int tiff_unpack_strip(TiffContext *s, AVFrame *p, uint8_t *dst, int strid
             av_log(s->avctx, AV_LOG_ERROR, "More than one DNG JPEG strips unsupported\n");
             return AVERROR_PATCHWELCOME;
         }
-        if ((ret = dng_decode_strip(s->avctx, p)) < 0)
+        if ((ret = dng_decode_jpeg(s->avctx, p, s->stripsize, 0, 0, s->width, s->height)) < 0)
             return ret;
         return 0;
     }
@@ -972,13 +958,7 @@ static int dng_decode_tiles(AVCodecContext *avctx, AVFrame *frame,
     int has_width_leftover, has_height_leftover;
     int tile_x = 0, tile_y = 0;
     int pos_x = 0, pos_y = 0;
-    int ret = ff_set_dimensions(s->avctx_mjpeg, s->tile_width, s->tile_length);
-
-    if (ret < 0)
-        return ret;
-
-    s->jpgframe->width  = s->tile_width;
-    s->jpgframe->height = s->tile_length;
+    int ret;
 
     has_width_leftover = (s->width % s->tile_width != 0);
     has_height_leftover = (s->height % s->tile_length != 0);
@@ -1036,7 +1016,7 @@ static int dng_decode_tiles(AVCodecContext *avctx, AVFrame *frame,
     return avpkt->size;
 }
 
-static int init_image(TiffContext *s, ThreadFrame *frame)
+static int init_image(TiffContext *s, AVFrame *frame)
 {
     int ret;
     int create_gray_palette = 0;
@@ -1197,11 +1177,11 @@ static int init_image(TiffContext *s, ThreadFrame *frame)
         return ret;
     if (s->avctx->pix_fmt == AV_PIX_FMT_PAL8) {
         if (!create_gray_palette)
-            memcpy(frame->f->data[1], s->palette, sizeof(s->palette));
+            memcpy(frame->data[1], s->palette, sizeof(s->palette));
         else {
             /* make default grayscale pal */
             int i;
-            uint32_t *pal = (uint32_t *)frame->f->data[1];
+            uint32_t *pal = (uint32_t *)frame->data[1];
             for (i = 0; i < 1<<s->bpp; i++)
                 pal[i] = 0xFFU << 24 | i * 255 / ((1<<s->bpp) - 1) * 0x010101;
         }
@@ -1261,8 +1241,8 @@ static int tiff_decode_tag(TiffContext *s, AVFrame *frame)
             value  = ff_tget(&s->gb, TIFF_LONG, s->le);
             value2 = ff_tget(&s->gb, TIFF_LONG, s->le);
             if (!value2) {
-                av_log(s->avctx, AV_LOG_ERROR, "Invalid denominator in rational\n");
-                return AVERROR_INVALIDDATA;
+                av_log(s->avctx, AV_LOG_WARNING, "Invalid denominator in rational\n");
+                value2 = 1;
             }
 
             break;
@@ -1441,8 +1421,8 @@ static int tiff_decode_tag(TiffContext *s, AVFrame *frame)
                 value  = ff_tget(&s->gb, TIFF_LONG, s->le);
                 value2 = ff_tget(&s->gb, TIFF_LONG, s->le);
                 if (!value2) {
-                    av_log(s->avctx, AV_LOG_ERROR, "Invalid black level denominator\n");
-                    return AVERROR_INVALIDDATA;
+                    av_log(s->avctx, AV_LOG_WARNING, "Invalid black level denominator\n");
+                    value2 = 1;
                 }
 
                 s->black_level = value / value2;
@@ -1763,7 +1743,6 @@ static int decode_frame(AVCodecContext *avctx,
 {
     TiffContext *const s = avctx->priv_data;
     AVFrame *const p = data;
-    ThreadFrame frame = { .f = data };
     unsigned off, last_off;
     int le, ret, plane, planes;
     int i, j, entries, stride;
@@ -1914,7 +1893,7 @@ again:
     }
 
     /* now we have the data and may start decoding */
-    if ((ret = init_image(s, &frame)) < 0)
+    if ((ret = init_image(s, p)) < 0)
         return ret;
 
     if (!s->is_tiled || has_strip_bits) {

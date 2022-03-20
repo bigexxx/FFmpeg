@@ -218,6 +218,15 @@ typedef struct MOVStreamContext {
     int start_pad;        ///< amount of samples to skip due to enc-dec delay
     unsigned int rap_group_count;
     MOVSbgp *rap_group;
+    unsigned int sync_group_count;
+    MOVSbgp *sync_group;
+    uint8_t *sgpd_sync;
+    uint32_t sgpd_sync_count;
+    int32_t *sample_offsets;
+    int sample_offsets_count;
+    int *open_key_samples;
+    int open_key_samples_count;
+    uint32_t min_sample_duration;
 
     int nb_frames_for_fps;
     int64_t duration_for_fps;
@@ -305,6 +314,7 @@ typedef struct MOVContext {
     int32_t movie_display_matrix[3][3]; ///< display matrix from mvhd
     int have_read_mfra_size;
     uint32_t mfra_size;
+    uint32_t max_stts_delta;
 } MOVContext;
 
 int ff_mp4_read_descr_len(AVIOContext *pb);
