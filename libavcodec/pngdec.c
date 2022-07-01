@@ -33,6 +33,7 @@
 
 #include "avcodec.h"
 #include "bytestream.h"
+#include "codec_internal.h"
 #include "internal.h"
 #include "apng.h"
 #include "png.h"
@@ -1514,14 +1515,12 @@ fail:
 }
 
 #if CONFIG_PNG_DECODER
-static int decode_frame_png(AVCodecContext *avctx,
-                        void *data, int *got_frame,
-                        AVPacket *avpkt)
+static int decode_frame_png(AVCodecContext *avctx, AVFrame *dst_frame,
+                            int *got_frame, AVPacket *avpkt)
 {
     PNGDecContext *const s = avctx->priv_data;
     const uint8_t *buf     = avpkt->data;
     int buf_size           = avpkt->size;
-    AVFrame     *dst_frame = data;
     AVFrame *p = s->picture.f;
     int64_t sig;
     int ret;
@@ -1575,12 +1574,10 @@ the_end:
 #endif
 
 #if CONFIG_APNG_DECODER
-static int decode_frame_apng(AVCodecContext *avctx,
-                        void *data, int *got_frame,
-                        AVPacket *avpkt)
+static int decode_frame_apng(AVCodecContext *avctx, AVFrame *dst_frame,
+                             int *got_frame, AVPacket *avpkt)
 {
     PNGDecContext *const s = avctx->priv_data;
-    AVFrame     *dst_frame = data;
     int ret;
     AVFrame *p = s->picture.f;
 
@@ -1718,34 +1715,34 @@ static av_cold int png_dec_end(AVCodecContext *avctx)
 }
 
 #if CONFIG_APNG_DECODER
-const AVCodec ff_apng_decoder = {
-    .name           = "apng",
-    .long_name      = NULL_IF_CONFIG_SMALL("APNG (Animated Portable Network Graphics) image"),
-    .type           = AVMEDIA_TYPE_VIDEO,
-    .id             = AV_CODEC_ID_APNG,
+const FFCodec ff_apng_decoder = {
+    .p.name         = "apng",
+    .p.long_name    = NULL_IF_CONFIG_SMALL("APNG (Animated Portable Network Graphics) image"),
+    .p.type         = AVMEDIA_TYPE_VIDEO,
+    .p.id           = AV_CODEC_ID_APNG,
     .priv_data_size = sizeof(PNGDecContext),
     .init           = png_dec_init,
     .close          = png_dec_end,
-    .decode         = decode_frame_apng,
+    FF_CODEC_DECODE_CB(decode_frame_apng),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(update_thread_context),
-    .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS /*| AV_CODEC_CAP_DRAW_HORIZ_BAND*/,
+    .p.capabilities = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS /*| AV_CODEC_CAP_DRAW_HORIZ_BAND*/,
     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE | FF_CODEC_CAP_INIT_CLEANUP |
                       FF_CODEC_CAP_ALLOCATE_PROGRESS,
 };
 #endif
 
 #if CONFIG_PNG_DECODER
-const AVCodec ff_png_decoder = {
-    .name           = "png",
-    .long_name      = NULL_IF_CONFIG_SMALL("PNG (Portable Network Graphics) image"),
-    .type           = AVMEDIA_TYPE_VIDEO,
-    .id             = AV_CODEC_ID_PNG,
+const FFCodec ff_png_decoder = {
+    .p.name         = "png",
+    .p.long_name    = NULL_IF_CONFIG_SMALL("PNG (Portable Network Graphics) image"),
+    .p.type         = AVMEDIA_TYPE_VIDEO,
+    .p.id           = AV_CODEC_ID_PNG,
     .priv_data_size = sizeof(PNGDecContext),
     .init           = png_dec_init,
     .close          = png_dec_end,
-    .decode         = decode_frame_png,
+    FF_CODEC_DECODE_CB(decode_frame_png),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(update_thread_context),
-    .capabilities   = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS /*| AV_CODEC_CAP_DRAW_HORIZ_BAND*/,
+    .p.capabilities = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS /*| AV_CODEC_CAP_DRAW_HORIZ_BAND*/,
     .caps_internal  = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM | FF_CODEC_CAP_INIT_THREADSAFE |
                       FF_CODEC_CAP_ALLOCATE_PROGRESS | FF_CODEC_CAP_INIT_CLEANUP,
 };

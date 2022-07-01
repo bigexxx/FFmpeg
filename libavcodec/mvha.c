@@ -29,6 +29,7 @@
 
 #include "avcodec.h"
 #include "bytestream.h"
+#include "codec_internal.h"
 #include "get_bits.h"
 #include "internal.h"
 #include "lossless_videodsp.h"
@@ -147,12 +148,10 @@ static int build_vlc(AVCodecContext *avctx, VLC *vlc)
     return ff_init_vlc_sparse(vlc, 12, pos, lens, 2, 2, bits, 4, 4, xlat, 1, 1, 0);
 }
 
-static int decode_frame(AVCodecContext *avctx,
-                        void *data, int *got_frame,
-                        AVPacket *avpkt)
+static int decode_frame(AVCodecContext *avctx, AVFrame *frame,
+                        int *got_frame, AVPacket *avpkt)
 {
     MVHAContext *s = avctx->priv_data;
-    AVFrame *frame = data;
     uint32_t type, size;
     int ret;
 
@@ -299,16 +298,16 @@ static av_cold int decode_close(AVCodecContext *avctx)
     return 0;
 }
 
-const AVCodec ff_mvha_decoder = {
-    .name             = "mvha",
-    .long_name        = NULL_IF_CONFIG_SMALL("MidiVid Archive Codec"),
-    .type             = AVMEDIA_TYPE_VIDEO,
-    .id               = AV_CODEC_ID_MVHA,
+const FFCodec ff_mvha_decoder = {
+    .p.name           = "mvha",
+    .p.long_name      = NULL_IF_CONFIG_SMALL("MidiVid Archive Codec"),
+    .p.type           = AVMEDIA_TYPE_VIDEO,
+    .p.id             = AV_CODEC_ID_MVHA,
     .priv_data_size   = sizeof(MVHAContext),
     .init             = decode_init,
     .close            = decode_close,
-    .decode           = decode_frame,
-    .capabilities     = AV_CODEC_CAP_DR1,
+    FF_CODEC_DECODE_CB(decode_frame),
+    .p.capabilities   = AV_CODEC_CAP_DR1,
     .caps_internal    = FF_CODEC_CAP_INIT_THREADSAFE |
                         FF_CODEC_CAP_INIT_CLEANUP,
 };
