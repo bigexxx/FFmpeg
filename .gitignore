@@ -30,6 +30,7 @@
 .\#*
 /.config
 /.version
+/.idea
 /ffmpeg
 /ffplay
 /ffprobe
@@ -41,3 +42,5 @@
 /src
 /mapfile
 /tools/python/__pycache__/
+/Dockerfile
+/docker-build.sh

@@ -38,13 +38,19 @@ void ff_hls_write_playlist_version(AVIOContext *out, int version)
 
 void ff_hls_write_audio_rendition(AVIOContext *out, const char *agroup,
                                   const char *filename, const char *language,
-                                  int name_id, int is_default)
+                                  int name_id, int is_default, const char *realname)
 {
     if (!out || !agroup || !filename)
         return;
 
     avio_printf(out, "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"group_%s\"", agroup);
-    avio_printf(out, ",NAME=\"audio_%d\",DEFAULT=%s,", name_id, is_default ? "YES" : "NO");
+    if(realname) {
+      avio_printf(out, ",NAME=\"%s\",", realname);
+    }
+    else {
+      avio_printf(out, ",NAME=\"audio_%d\",", name_id);
+    }
+    avio_printf(out, "DEFAULT=%s,AUTOSELECT=YES,", is_default ? "YES" : "NO");
     if (language) {
         avio_printf(out, "LANGUAGE=\"%s\",", language);
     }
@@ -90,6 +96,8 @@ void ff_hls_write_stream_info(AVStream *st, AVIOContext *out, int bandwidth,
         avio_printf(out, ",AUDIO=\"group_%s\"", agroup);
     if (ccgroup && ccgroup[0])
         avio_printf(out, ",CLOSED-CAPTIONS=\"%s\"", ccgroup);
+    else
+        avio_printf(out, ",CLOSED-CAPTIONS=NONE");
     if (sgroup && sgroup[0])
         avio_printf(out, ",SUBTITLES=\"%s\"", sgroup);
     avio_printf(out, "\n%s\n\n", filename);
