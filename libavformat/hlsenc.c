@@ -600,10 +600,13 @@ static int hls_delete_old_segments(AVFormatContext *s, HLSContext *hls,
     char *vtt_dirname_r = NULL;
     const char *proto = NULL;
 
+    //av_log(hls, AV_LOG_WARNING, "hls_delete_old_segments\n");
+
     av_bprint_init(&path, 0, AV_BPRINT_SIZE_UNLIMITED);
 
     segment = vs->segments;
     while (segment) {
+        //av_log(hls, AV_LOG_WARNING, "segments %s\n", segment->filename);
         playlist_duration += segment->duration;
         segment = segment->next;
     }
@@ -611,18 +614,32 @@ static int hls_delete_old_segments(AVFormatContext *s, HLSContext *hls,
     segment = vs->old_segments;
     segment_cnt = 0;
     while (segment) {
+        //av_log(hls, AV_LOG_WARNING, "old_segments %s, threshold %d\n", segment->filename, hls->hls_delete_threshold);
+
         playlist_duration -= segment->duration;
-        previous_segment = segment;
-        segment = previous_segment->next;
+
         segment_cnt++;
-        if (playlist_duration <= -previous_segment->duration) {
-            previous_segment->next = NULL;
+        if (playlist_duration <= -segment->duration) {
+            if(previous_segment) {
+                previous_segment->next = NULL;
+            }
+            else {
+              vs->old_segments = NULL;
+            }
             break;
         }
         if (segment_cnt >= hls->hls_delete_threshold) {
-            previous_segment->next = NULL;
+            if(previous_segment) {
+                previous_segment->next = NULL;
+            }
+            else {
+              vs->old_segments = NULL;
+            }
             break;
         }
+
+        previous_segment = segment;
+        segment = previous_segment->next;
     }
 
     if (segment && !hls->use_localtime_mkdir) {
@@ -3112,7 +3129,7 @@ static const AVOption options[] = {
     {"hls_time",      "set segment length",                      OFFSET(time),          AV_OPT_TYPE_DURATION, {.i64 = 2000000}, 0, INT64_MAX, E},
     {"hls_init_time", "set segment length at init list",         OFFSET(init_time),     AV_OPT_TYPE_DURATION, {.i64 = 0},       0, INT64_MAX, E},
     {"hls_list_size", "set maximum number of playlist entries",  OFFSET(max_nb_segments),    AV_OPT_TYPE_INT,    {.i64 = 5},     0, INT_MAX, E},
-    {"hls_delete_threshold", "set number of unreferenced segments to keep before deleting",  OFFSET(hls_delete_threshold),    AV_OPT_TYPE_INT,    {.i64 = 1},     0, INT_MAX, E},
+    {"hls_delete_threshold", "set number of unreferenced segments to keep before deleting",  OFFSET(hls_delete_threshold),    AV_OPT_TYPE_INT,    {.i64 = 1},     1, INT_MAX, E},
 #if FF_HLS_TS_OPTIONS
     {"hls_ts_options","set hls mpegts list of options for the container format used for hls (deprecated, use hls_segment_options instead of it.)", OFFSET(format_options), AV_OPT_TYPE_DICT, {.str = NULL},  0, 0,    E | AV_OPT_FLAG_DEPRECATED},
 #endif

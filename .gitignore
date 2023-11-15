@@ -44,3 +44,4 @@
 /tools/python/__pycache__/
 /Dockerfile
 /docker-build.sh
+/misc
